@@ -43,6 +43,7 @@ fi
 
 ## Tool help
 
+```
 Help using /home/nkoester/local/bin/mpsZooKeeper.sh
 
     SCRIPT -m mpsVersion [-b mpsInstallPath] [-f prefixPath] [-i identifier] [-x] [-s] [-p port]
@@ -88,3 +89,4 @@ The created start script allows you to run MPS with this configuration folder. Y
 In case you put your configuration in your git root, it is advisable to add the alias 'cleanxdf = clean -xdf -e .mpsconfig' to your global git config.
 
 WARNING: Do not have any '--' within paths or identifiers - it will break MPS.
+```
