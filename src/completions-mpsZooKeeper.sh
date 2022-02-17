@@ -5,7 +5,12 @@ AVAILABLE_MPS_VERSIONS=""
 
 __get_MPS_versions()
 {
-    AVAILABLE_MPS_VERSIONS=$(find /${MPS_BASE_PATH}/MPS-* -maxdepth 1 -type d -prune -printf '%f ' 2>/dev/null  | sed 's/MPS-//g') || true
+    # if the MPS base path does not exist we will provide default completion for this arguemnt
+    if [[ ! -d "${MPS_BASE_PATH}" ]]; then
+        AVAILABLE_MPS_VERSIONS="-1"
+    else
+        AVAILABLE_MPS_VERSIONS=$(find /${MPS_BASE_PATH}/MPS-* -maxdepth 1 -type d -prune -printf '%f ' 2>/dev/null  | sed 's/MPS-//g') || true
+    fi
 }
 
 __mpsZooKeeper_completions()
@@ -60,22 +65,22 @@ __mpsZooKeeper_completions()
                 MPS_BASE_PATH=${words[index+1]}
                 ;;
             # configuration settings
-            --cfg-folder) used_cfg_folder=1;;
-            --identifier) used_identifier=1;;
+            -f|--cfg-folder) used_cfg_folder=1;;
+            -i|--identifier) used_identifier=1;;
             # debug settings
-            --debug-enable) used_debug_enable=1;;
-            --debug-enable-suspend) used_debug_enable_suspend=1;;
-            --debug-port) used_debug_port=1;;
+            -x|--debug-enable) used_debug_enable=1;;
+            -s|--debug-enable-suspend) used_debug_enable_suspend=1;;
+            -p|--debug-port) used_debug_port=1;;
             # misc
-            --darktheme) used_darktheme=1;;
-            --plugins) used_plugins=1;;
+            -t|--darktheme) used_darktheme=1;;
+            -l|--plugins) used_plugins=1;;
             # run
-            --run) used_run=1;;
+            -r|--run) used_run=1;;
             # generics
-            --help) used_help=1 ;;
-            --debug) used_debug=1 ;;
-            --no-color) used_no_color=1 ;;
-            --verbose) used_verbose=1 ;;
+            -h|--help) used_help=1 ;;
+            -d|--debug) used_debug=1 ;;
+            -n|--no-color) used_no_color=1 ;;
+            -v|--verbose) used_verbose=1 ;;
         esac
     done
 
@@ -89,6 +94,9 @@ __mpsZooKeeper_completions()
             ;;
         -b | --mps-base-path)
             args="-1"
+            ;;
+        -l | --plugins)
+            args="plugins"
             ;;
         *)
             # mps settings
@@ -116,8 +124,13 @@ __mpsZooKeeper_completions()
     # echo "args: ${args}"
     # echo "ccompgen -W '${args}' ${cur}"
     # echo ""
-    if [[ "${args}" == "-1" ]]; then
-        COMPREPLY=()
+    # if [[ "${COMP_CWORD}" == "-1" ]]; then
+    # fi
+    if [[ "${args}" == "-1" ]] || [[ "${args}" == "plugins" ]]; then
+        # see https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
+        COMPREPLY=($(compgen -S"/" -d "${cur}"))
+        # old way with no tailing slashes
+        # COMPREPLY=($(compgen -o default -- "${cur}"))
     else
         COMPREPLY=($(compgen -W "${args}" -- "${cur}"))
     fi
