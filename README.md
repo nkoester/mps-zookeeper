@@ -25,9 +25,9 @@ make install
 
 In order to use the tool from your shell, add `$YOUR-PREFIX/bin` to your `$PATH` variable. Further, completions are provided and installed to `$YOUR-PREFIX/bashcompletions`.
 
-Assuming you installed to `${HOME}/local/`, add the follwing to your `.bashrc`:
+Assuming you installed to `${HOME}/local/`, add the following to your `.bashrc`:
 
-```
+``` bash
 # add local prefix to path
 export PATH=${HOME}/local/bin:${PATH}
 
@@ -35,15 +35,78 @@ export PATH=${HOME}/local/bin:${PATH}
 if ! shopt -oq posix; then
     # load personal completions
     if [[ -d ${HOME}/local/bashcompletions ]];then
-        source ${HOME}/local/bashcompletions/*
+        for f in ${HOME}/local/bashcompletions/*; do
+            source ${f}
+        done
     fi
 fi
-
 ```
 
-## Tool help
+### Usage examples
 
+Create a temporary MPS configuration in /tmp and run it.
+``` bash
+$ mpsZooKeeper.sh --mps-version 2020.3.5-linux --run
 ```
+
+Create a temporary MPS configuration in /tmp, copy some existing plugins into it and run it.
+``` bash
+$ mpsZooKeeper.sh --mps-version 2020.3.5-linux --plugins /vol/mps/plugins/MPS-2020.3.4/myOwnPlugin/ --plugins /vol/mps/plugins/MPS-2020.3.4/iets3-2020.3.5116.6bd9f15/ --run
+```
+
+Create a temporary MPS configuration in /tmp, with custom debugging settings.
+``` bash
+$ mpsZooKeeper.sh --mps-version 2020.3.5-linux --debug-enable --debug-enable-suspend --debug-port 20203
+```
+
+Run a generated script and open the log in a new window
+``` bash
+/tmp/.mpsconfig/MPS-2020-3-5-linux-220217-152625-UTC/startLocalizedMPS.sh tmuxLA
+```
+
+
+### MPS base path (`$MPS_BASE_PATH`)
+
+To have completions for your installed MPS versions put your MPS installations into the current default at `/vol/mps/MPS-{YOUR-VERSIONS-HERE}`. For example:
+
+``` bash
+/vol/mps
+├── MPS-2019.1.6-linux
+├── MPS-2019.3.7-linux
+├── MPS-2020.3.5-linux
+├── MPS-2020.3.6-linux
+├── MPS-2021.1.3-linux
+├── MPS-2021.2.2-linux
+└── MPS-2021.2.3-linux
+```
+
+Alternatively, you can change the default path where your MPS versions lie by set the environment variable `$MPS_BASE_PATH` before sourcing the completion file.
+
+
+### Layout of generated configuration
+
+The mpsZooKeeper.sh writes a self-contained minimal configuration. This configuration is structured similarly to:
+
+``` bash
+    .mpsconfig/
+  └──   MPS-2021.1.3-linux-210926-135815-UTC/
+      ├──   config/
+      │   └──   options/
+      │       └──   laf.xml
+      ├──   log/
+      ├──   plugins/
+      ├──   system/
+      ├──   idea.properties
+      ├──   mps64.vmoptions
+      ├──   prefixEnvironment.env
+      └──   startLocalizedMPS.sh
+```
+
+
+
+## Full help text
+
+``` bash
 Help using /home/nkoester/local/bin/mpsZooKeeper.sh
 
     SCRIPT -m mpsVersion [-b mpsInstallPath] [-f prefixPath] [-i identifier] [-x] [-s] [-p port]
