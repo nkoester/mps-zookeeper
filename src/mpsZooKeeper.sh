@@ -228,7 +228,7 @@ read -r -d '' __usage <<-'EOF' || true # exits non-zero when EOF encountered
     -s --debug-enable-suspend   Sets 'suspend=y' in MPS vmoptions.
     -p --debug-port [arg]       Changes the debug port in MPS vmoptions.  Default="51337"
 
-    -l --plugins [arg]          Copies all sub folders from the given path into the plugin folder of the new prefix. Default="none"
+    -l --plugins [arg]          Copies all sub folders and files from the given path into the plugin folder of the new prefix. Can be repeated.
     -r --run                    Runs the created configuration using tmux.
     -t --darktheme              Use default dark theme (works for MPS versions > 2019.x).
 
@@ -276,12 +276,20 @@ ARG_MPS_TARGET_VERSION=${arg_m}
 ARG_MPS_BASE_PATH=${arg_b}
 CURRENT_DATE=$(date)
 ARG_IDENTIFIER=${arg_i:-$(date -u +"%y%m%d-%H%M%S-UTC")}
-# MPS_CONFIG_PREFIX="/tmp/.mpsconfig/${MPS_VERSION}-$(uuidgen)"
-ARG_PLUGIN_SOURCE=${arg_l}
 
-if [[ ! ${arg_l} == "none" ]] && [[ ! -d "${ARG_PLUGIN_SOURCE}" ]]; then
-    log_error "Cannot find plugins at path ${ARG_PLUGIN_SOURCE}! Aborting."
-    exit 1
+# check plugin paths exist
+if [[ -n "${arg_l:-}" ]] && declare -p arg_l 2> /dev/null | grep -q '^declare \-a'; then
+    for input_file in "${arg_l[@]}"; do
+        if [[ "${input_file}" != "" ]] && [[ ! -d "${input_file}" ]]; then
+            log_error "Plugin path does not exist: '${input_file}' Aborting."
+            exit 1
+        fi
+    done
+elif [[ -n "${arg_l:-}" ]]; then
+    if [[ "${arg_l}" != "" ]] && [[ ! -d "${arg_l}" ]]; then
+        log_error "Plugin path does not exist: ${arg_l}! Aborting."
+        exit 1
+    fi
 fi
 
 MPS_VERSION="MPS-${ARG_MPS_TARGET_VERSION}"
@@ -401,16 +409,23 @@ echo "${MPS_LOCALIZED_STARTUP_SCRIPT}" > ${MPS_CONFIG_FULL}/startLocalizedMPS.sh
 chmod +x ${MPS_CONFIG_FULL}/startLocalizedMPS.sh
 
 # install plugins
-if [[ ! ${arg_l} == "none" ]] && [[ -d "${ARG_PLUGIN_SOURCE}" ]]; then
-  log_info "Adding $(ls -d ${ARG_PLUGIN_SOURCE}/* | wc -l | cut -f 1) plugins to the mix ..."
-    cp -r ${ARG_PLUGIN_SOURCE}/* ${MPS_CONFIG_FULL}/plugins/
+if [[ -n "${arg_l:-}" ]] && declare -p arg_l 2> /dev/null | grep -q '^declare \-a'; then
+    log_info "Adding plugins ..."
+    # log_info "Adding $(ls -d ${input_file}/* | wc -l | cut -f 1) plugins to the mix ..."
+    for input_file in "${arg_l[@]}"; do
+        log_info "  Copying from ${input_file}/* to ${MPS_CONFIG_FULL}/plugins/"
+        cp -r ${input_file}/* ${MPS_CONFIG_FULL}/plugins/
+    done
+elif [[ -n "${arg_l:-}" ]]; then
+    log_info "  Copying from ${arg_l}/* to ${MPS_CONFIG_FULL}/plugins/"
+    cp -r ${arg_l}/* ${MPS_CONFIG_FULL}/plugins/
 fi
 
 
 log_info "Configuration is all set :>"
 log_info "--------------------"
 log_notice "Environment file: ${MPS_CONFIG_FULL}/prefixEnvironment.env"
-log_notice "Plugin path:      ${MPS_CONFIG_FULL}/config/plugins/"
+log_notice "Plugin path:      ${MPS_CONFIG_FULL}/plugins/"
 log_notice "idea.properties:  ${MPS_CONFIG_FULL}/idea.properties"
 log_notice "mps64.vmoptions:  ${MPS_CONFIG_FULL}/mps64.vmoptions"
 log_notice "Startup script:   ${MPS_CONFIG_FULL}/startLocalizedMPS.sh"

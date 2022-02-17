@@ -126,6 +126,8 @@ __mpsZooKeeper_completions()
     # echo ""
     # if [[ "${COMP_CWORD}" == "-1" ]]; then
     # fi
+
+    # we do normal completion, alternatively we complete with our own args
     if [[ "${args}" == "-1" ]] || [[ "${args}" == "plugins" ]]; then
         # see https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
         COMPREPLY=($(compgen -S"/" -d "${cur}"))
