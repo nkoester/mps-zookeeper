@@ -148,7 +148,7 @@ function testPaths {
     # We could double check via this. But thats would be overkill. Might be helpful for someone.
     # IDEA_BASE_PATH=$(head -n 1 idea.properties | cut -d "=" -f2 | awk -F'/config' '{print $1}')
 
-    if [[ "${CONFIG_BASE_PATH}" != "${CURRENT_BASE_PATH}" ]]; then
+    if [[ "${CONFIG_BASE_PATH}" != "${CURRENT_BASE_PATH}" ]] && [[ "${CURRENT_BASE_PATH}" != "." ]]; then
         echo "fail."
         echo "The base path seems to be broken"
         echo "    configured path:         ${CONFIG_BASE_PATH}"
@@ -167,7 +167,9 @@ function testPaths {
             source prefixEnvironment.env
         else
             echo "Will not update paths."
-            echo "WARNING: Starting MPS will most likely fail."
+            echo ""
+            echo "WARNING: Starting MPS will most likely fail. The configured path ${CURRENT_BASE_PATH} does not exist anymore. MPS will fall back to the default configuration path."
+            read -n 1 -s -r -p "Press any key to continue"
         fi
     else
         echo "ok."
@@ -328,7 +330,7 @@ fi
 # ensure the required arguments are set with custom message
 # [[ "${arg_m:-}" ]]     || help      "Setting an MPS version with -m or --mps is required!"
 if [[ -z "${arg_m:-}" ]];then
-    log_error "Setting an MPS version with -m or --mps is required!"
+    log_error "Setting an MPS version with -m or --mps-version is required!"
     log_notice "Available versions are"
     log_notice "${AVAILABLE_MPS_VERSIONS}"
     exit 1

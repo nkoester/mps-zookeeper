@@ -5,7 +5,6 @@ AVAILABLE_MPS_VERSIONS=""
 
 __get_MPS_versions()
 {
-
     AVAILABLE_MPS_VERSIONS=$(find /${MPS_BASE_PATH}/MPS-* -maxdepth 1 -type d -prune -printf '%f ' 2>/dev/null  | sed 's/MPS-//g') || true
 }
 
