@@ -80,7 +80,7 @@ To have completions for your installed MPS versions put your MPS installations i
 └── MPS-2021.2.3-linux
 ```
 
-Alternatively, you can change the default path where your MPS versions lie by set the environment variable `$MPS_BASE_PATH` before sourcing the completion file.
+Alternatively, you can change the default path where your MPS versions lie by setting the environment variable `$MPS_BASE_PATH` before sourcing the completion file.
 
 
 ### Layout of generated configuration
