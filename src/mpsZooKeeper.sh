@@ -132,7 +132,7 @@ read -r -d '' MPS_LOCALIZED_STARTUP_SCRIPT <<-'EOF' || true # exits non-zero whe
 #                 itself will be started in a detached tmux session and attach this terminal to it.
 
 # go to location of this script
-CURRENT_BASE_PATH=$(dirname "$0")
+CURRENT_BASE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 cd "${CURRENT_BASE_PATH}"
 
 # read our environment
