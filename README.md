@@ -112,9 +112,20 @@ If you use `git clean -xdf` in your project root, your generated configuration i
     cleanxdf = clean -xdf -e .mpsconfig
 ```
 
-## Full help text
+### Only allow starting of localized MPS instances
+
+If you do not want to start MPS without a localized configuration, you can delete all existing configurations and make the default config folder read-only:
 
 ``` bash
+$ mv ~/${HOME}/.config/Jetbrains ~/${HOME}/.config/Jetbrains.bak
+$ chmod guo-w ~/${HOME}/.config/Jetbrains
+```
+
+Warning! This can break other things. IntelliJ Idea, for example, will not work anymore unless you create a localized configuration for it.
+
+## Full help text
+
+```
 Help using /home/nkoester/local/bin/mpsZooKeeper.sh
 
     SCRIPT -m mpsVersion [-b mpsInstallPath] [-f prefixPath] [-i identifier] [-x] [-s] [-p port]
