@@ -103,6 +103,14 @@ The mpsZooKeeper.sh writes a self-contained minimal configuration. This configur
 ```
 
 
+### Git clean deltes my configuration
+
+If you use `git clean -xdf` in your project root, your generated configuration in `.mpconfig/` will also be deleted (as it is not checked in). To avoid this you could create the following git alias ignoring configuration folders:
+
+``` git
+[alias]
+    cleanxdf = clean -xdf -e .mpsconfig
+```
 
 ## Full help text
 
