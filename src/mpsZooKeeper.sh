@@ -21,6 +21,10 @@ read -r -d '' MPS_CONFIG_BASE_PATH <<-'EOF' || true # exits non-zero when EOF en
 # description: This file automatically generated. Do not modify.
 #
 #
+
+# wayland hack
+export _JAVA_AWT_WM_NONREPARENTING=1
+
 export CONFIG_BASE_PATH="PREFIX/SUFFIX"
 export CONFIG_MPS_PATH="MPS_BIN_PATH"
 export CONFIG_TMUX_SESSION_NAME="SUFFIX"
@@ -141,6 +145,7 @@ cd "${CURRENT_BASE_PATH}"
 #    $CONFIG_MPS_PATH
 #    $CONFIG_TMUX_SESSION_NAME
 source prefixEnvironment.env
+CURRENT_IDEA_PATH=$(cat ${CURRENT_BASE_PATH}/idea.properties | grep idea.config.path | cut -d "=" -f2)
 
 function testPaths {
     echo -n "Checking path 'tegrity ... "
@@ -153,6 +158,7 @@ function testPaths {
         echo "The base path seems to be broken"
         echo "    configured path:         ${CONFIG_BASE_PATH}"
         echo "    current actual path:     ${CURRENT_BASE_PATH}"
+        echo "    paths in idea.property   ${CURRENT_IDEA_PATH}"
         echo ""
         read -p "Automatically fix it? [yN] " ANSWER
         if [[ "${ANSWER}" == "y" ]] || [[ "${ANSWER}" == "Y" ]]
