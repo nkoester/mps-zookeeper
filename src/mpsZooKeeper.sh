@@ -83,7 +83,7 @@ read -r -d '' MPS_CUSTOM_VMOPTIONS <<-'EOF' || true # exits non-zero when EOF en
 #
 #
 -Xmx2048m
--XX:ReservedCodeCacheSize=240m
+-XX:ReservedCodeCacheSize=1024m
 -XX:+UseConcMarkSweepGC
 -XX:SoftRefLRUPolicyMSPerMB=50
 -ea
