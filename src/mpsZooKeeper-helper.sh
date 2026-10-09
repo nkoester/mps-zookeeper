@@ -438,7 +438,7 @@ log_debug "arg_v: ${arg_v}"
 log_debug "arg_h: ${arg_h}"
 
 # shellcheck disable=SC2015
-if [[ -n "${arg_i:-}" ]] && declare -p arg_i 2> /dev/null | grep -q '^declare \-a'; then
+if [[ -n "${arg_i:-}" ]] && declare -p arg_i 2> /dev/null | grep -q '^declare -a'; then
   log_debug "arg_i:"
   for input_file in "${arg_i[@]}"; do
     log_debug " - ${input_file}"
@@ -450,7 +450,7 @@ else
 fi
 
 # shellcheck disable=SC2015
-if [[ -n "${arg_x:-}" ]] && declare -p arg_x 2> /dev/null | grep -q '^declare \-a'; then
+if [[ -n "${arg_x:-}" ]] && declare -p arg_x 2> /dev/null | grep -q '^declare -a'; then
   log_debug "arg_x: ${#arg_x[@]}"
 elif [[ -n "${arg_x:-}" ]]; then
   log_debug "arg_x: ${arg_x}"

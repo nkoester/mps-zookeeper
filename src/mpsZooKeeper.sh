@@ -84,7 +84,7 @@ read -r -d '' MPS_CUSTOM_VMOPTIONS <<-'EOF' || true # exits non-zero when EOF en
 #
 -Xmx2048m
 -XX:ReservedCodeCacheSize=1024m
--XX:+UseConcMarkSweepGC
+-XX:+UseG1GC
 -XX:SoftRefLRUPolicyMSPerMB=50
 -ea
 -XX:CICompilerCount=2
@@ -99,7 +99,6 @@ read -r -d '' MPS_CUSTOM_VMOPTIONS <<-'EOF' || true # exits non-zero when EOF en
 -Dawt.useSystemAAFontSettings=lcd
 -Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine
 -Dsun.tools.attach.tmp.only=true
--client
 -Xss1024k
 -XX:NewSize=256m
 -Dfile.encoding=UTF-8
@@ -144,8 +143,19 @@ cd "${CURRENT_BASE_PATH}"
 #    $CONFIG_BASE_PATH
 #    $CONFIG_MPS_PATH
 #    $CONFIG_TMUX_SESSION_NAME
-source prefixEnvironment.env
-CURRENT_IDEA_PATH=$(cat ${CURRENT_BASE_PATH}/idea.properties | grep idea.config.path | cut -d "=" -f2)
+source "${CURRENT_BASE_PATH}/prefixEnvironment.env"
+CURRENT_IDEA_PATH=$(grep idea.config.path "${CURRENT_BASE_PATH}/idea.properties" | cut -d "=" -f2)
+
+# Rewrites every occurrence of the stale base path in the given file. Done with
+# bash substitution instead of sed so that no character of a path can ever be
+# mistaken for the expression delimiter.
+function replaceBasePath {
+    local target="$1" line
+    while IFS= read -r line; do
+        printf '%s\n' "${line//${CONFIG_BASE_PATH}/${CURRENT_BASE_PATH}}"
+    done < "${target}" > "${target}.tmp"
+    mv "${target}.tmp" "${target}"
+}
 
 function testPaths {
     echo -n "Checking path 'tegrity ... "
@@ -153,7 +163,7 @@ function testPaths {
     # We could double check via this. But thats would be overkill. Might be helpful for someone.
     # IDEA_BASE_PATH=$(head -n 1 idea.properties | cut -d "=" -f2 | awk -F'/config' '{print $1}')
 
-    if [[ "${CONFIG_BASE_PATH}" != "${CURRENT_BASE_PATH}" ]] && [[ "${CURRENT_BASE_PATH}" != "." ]]; then
+    if [[ "${CONFIG_BASE_PATH}" != "${CURRENT_BASE_PATH}" ]]; then
         echo "fail."
         echo "The base path seems to be broken"
         echo "    configured path:         ${CONFIG_BASE_PATH}"
@@ -164,13 +174,14 @@ function testPaths {
         if [[ "${ANSWER}" == "y" ]] || [[ "${ANSWER}" == "Y" ]]
         then
             echo "Replacing all wrong paths in 'idea.properties'"
-            sed -i 's~'"${CONFIG_BASE_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' idea.properties
+            replaceBasePath "${CURRENT_BASE_PATH}/idea.properties"
 
             echo "Replacing all wrong paths in 'prefixEnvironment.env'"
-            sed -i 's~'"${CONFIG_BASE_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' prefixEnvironment.env
+            replaceBasePath "${CURRENT_BASE_PATH}/prefixEnvironment.env"
 
             # reload to get the new paths
-            source prefixEnvironment.env
+            source "${CURRENT_BASE_PATH}/prefixEnvironment.env"
+            CURRENT_IDEA_PATH=$(grep idea.config.path "${CURRENT_BASE_PATH}/idea.properties" | cut -d "=" -f2)
         else
             echo "Will not update paths."
             echo ""
@@ -184,17 +195,37 @@ function testPaths {
 
 function tmuxd {
     echo "Spawning tmux session with name '${CONFIG_TMUX_SESSION_NAME}'"
-    tmux new-session -d -s "$CONFIG_TMUX_SESSION_NAME" "MPS_PROPERTIES=$CONFIG_BASE_PATH/idea.properties IDEA_VM_OPTIONS=$CONFIG_BASE_PATH/mps64.vmoptions  $CONFIG_MPS_PATH/mps.sh"
+    tmux new-session -d -s "${CONFIG_TMUX_SESSION_NAME}" \
+        "MPS_PROPERTIES='${CONFIG_BASE_PATH}/idea.properties' IDEA_VM_OPTIONS='${CONFIG_BASE_PATH}/mps64.vmoptions' '${CONFIG_MPS_PATH}/mps.sh'"
 }
 
 function tmuxa {
     tmux list-sessions
-    tmux attach-session -t $CONFIG_TMUX_SESSION_NAME
+    tmux attach-session -t "${CONFIG_TMUX_SESSION_NAME}"
 }
 
 function followLog {
-    touch $CONFIG_BASE_PATH/log/idea.log
-    $TERMINAL --title="MPS-LOG" -e tail -F $CONFIG_BASE_PATH/log/idea.log&
+    local terminal="${TERMINAL:-}"
+
+    if [[ -z "${terminal}" ]]; then
+        for candidate in x-terminal-emulator gnome-terminal konsole xfce4-terminal alacritty kitty xterm; do
+            if command -v "${candidate}" >/dev/null 2>&1; then
+                terminal="${candidate}"
+                break
+            fi
+        done
+    fi
+
+    touch "${CONFIG_BASE_PATH}/log/idea.log"
+
+    if [[ -z "${terminal}" ]]; then
+        echo "No terminal emulator found - set \$TERMINAL to follow the log in its own window."
+        echo "Falling back to following the log in this terminal."
+        tail -F "${CONFIG_BASE_PATH}/log/idea.log" &
+        return
+    fi
+
+    "${terminal}" --title="MPS-LOG" -e tail -F "${CONFIG_BASE_PATH}/log/idea.log" &
 }
 
 # run path test
@@ -218,7 +249,7 @@ else
     echo " --> No/unknown argument ('${1}') given - startig MPS directly in this terminal"
     echo "     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA"
     echo " (!)"
-    MPS_PROPERTIES=$CONFIG_BASE_PATH/idea.properties IDEA_VM_OPTIONS=$CONFIG_BASE_PATH/mps64.vmoptions  $CONFIG_MPS_PATH/mps.sh
+    MPS_PROPERTIES="${CONFIG_BASE_PATH}/idea.properties" IDEA_VM_OPTIONS="${CONFIG_BASE_PATH}/mps64.vmoptions" "${CONFIG_MPS_PATH}/mps.sh"
 fi
 EOF
 
@@ -273,8 +304,9 @@ Creates MPS configurations and consequently allows you to run multiple instances
   WARNING: Do not have any '--' within paths or identifiers - it will break MPS.
 EOF
 
-# source the scripts doing the nice meta
-source mpsZooKeeper-helper.sh
+# source the scripts doing the nice meta (next to this script, not in $PWD)
+__zoo_dir="$( cd -- "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 || exit 1 ; pwd -P )"
+source "${__zoo_dir}/mpsZooKeeper-helper.sh"
 
 log_info "Starting mpsZooKeeper ..."
 
@@ -284,7 +316,7 @@ CURRENT_DATE=$(date)
 ARG_IDENTIFIER=${arg_i:-$(date -u +"%y%m%d-%H%M%S-UTC")}
 
 # check plugin paths exist
-if [[ -n "${arg_l:-}" ]] && declare -p arg_l 2> /dev/null | grep -q '^declare \-a'; then
+if [[ -n "${arg_l:-}" ]] && declare -p arg_l 2> /dev/null | grep -q '^declare -a'; then
     for input_file in "${arg_l[@]}"; do
         if [[ "${input_file}" != "" ]] && [[ ! -d "${input_file}" ]]; then
             log_error "Plugin path does not exist: '${input_file}' Aborting."
@@ -299,9 +331,13 @@ elif [[ -n "${arg_l:-}" ]]; then
 fi
 
 MPS_VERSION="MPS-${ARG_MPS_TARGET_VERSION}"
-MPS_BIN_PATH="${ARG_MPS_BASE_PATH}//MPS-${ARG_MPS_TARGET_VERSION}/bin"
+# absolutize: the generated launcher cds into its own prefix, so a relative
+# base path would not resolve there. -m because it need not exist yet.
+ARG_MPS_BASE_PATH=$(realpath -m "${ARG_MPS_BASE_PATH}")
+MPS_BIN_PATH="${ARG_MPS_BASE_PATH}/MPS-${ARG_MPS_TARGET_VERSION}/bin"
 
-MPS_CONFIG_PREFIX=$(realpath "${arg_f}/.mpsconfig/")
+# -m: the prefix does not exist yet, resolve it without requiring it to
+MPS_CONFIG_PREFIX=$(realpath -m "${arg_f}/.mpsconfig/")
 MPS_CONFIG_SUFFIX="${MPS_VERSION}-${ARG_IDENTIFIER}"
 MPS_CONFIG_SUFFIX=${MPS_CONFIG_SUFFIX//./-}
 MPS_CONFIG_FULL="${MPS_CONFIG_PREFIX}/${MPS_CONFIG_SUFFIX}"
@@ -335,7 +371,7 @@ MPS_LOCALIZED_STARTUP_SCRIPT=${MPS_LOCALIZED_STARTUP_SCRIPT//GENERATION_DATE/${C
 log_info "Checking conditions to create prefix ..."
 
 # get available MPS versions
-AVAILABLE_MPS_VERSIONS=$(find /${ARG_MPS_BASE_PATH}/MPS-* -maxdepth 1 -type d -prune -printf '%f ' 2>/dev/null  | sed 's/MPS-//g') || true
+AVAILABLE_MPS_VERSIONS=$(find "${ARG_MPS_BASE_PATH}" -mindepth 1 -maxdepth 1 -type d -name 'MPS-*' -printf '%f ' 2>/dev/null | sed 's/MPS-//g') || true
 if [[ -z "${AVAILABLE_MPS_VERSIONS}" ]]; then
     log_error "Unable to find any MPS versions at '${ARG_MPS_BASE_PATH}'. Set -b / --mps-base-path?"
     exit 1
@@ -359,13 +395,14 @@ if [[ ! -d "${MPS_BIN_PATH}" ]]; then
 fi
 
 # ensure we do not overwrite existing stuff
-if [[ -d $MPS_CONFIG_FULL ]]; then
+if [[ -d "${MPS_CONFIG_FULL}" ]]; then
     log_warning "Configuration prefix folder already exists: ${MPS_CONFIG_FULL}"
     read -p "Overwrite this existing config? [yN] " ANSWER
     if [[ "${ANSWER}" == "y" ]] || [[ "${ANSWER}" == "Y" ]]
     then
-        # good luck
-        log_info "Forcing write to folder."
+        # wipe it, otherwise stale plugins/config of the old prefix survive
+        log_info "Removing existing folder ${MPS_CONFIG_FULL}"
+        rm -rf -- "${MPS_CONFIG_FULL}"
     else
         log_error "Aborting."
         exit 1
@@ -392,39 +429,40 @@ fi
 log_info "Writing configuration to ${MPS_CONFIG_FULL}"
 
 # create folders
-mkdir -p ${MPS_CONFIG_FULL}/{'plugins','config/options','system','log'}
+mkdir -p "${MPS_CONFIG_FULL}"/{plugins,config/options,system,log}
 
 # write idea.properties and vmoption file
-echo "${MPS_LOCALIZED_IDEA_PROPERTIES}" > ${MPS_CONFIG_FULL}/idea.properties
+echo "${MPS_LOCALIZED_IDEA_PROPERTIES}" > "${MPS_CONFIG_FULL}/idea.properties"
 
 # write color scheme xml
 if [[ "${arg_t:-}" == 1 ]]; then
     log_info "Will not overwrite dark mode with light theme"
 else
-    echo "${MPS_COLOR_SCHEME_LAF}" > ${MPS_CONFIG_FULL}/config/options/laf.xml
-    echo "${MPS_COLOR_SCHEME}" > ${MPS_CONFIG_FULL}/config/options/colors.scheme.xml
+    echo "${MPS_COLOR_SCHEME_LAF}" > "${MPS_CONFIG_FULL}/config/options/laf.xml"
+    echo "${MPS_COLOR_SCHEME}" > "${MPS_CONFIG_FULL}/config/options/colors.scheme.xml"
 fi
 
 # write mps64.vmoptions
-echo "${MPS_CUSTOM_VMOPTIONS}" > ${MPS_CONFIG_FULL}/mps64.vmoptions
+echo "${MPS_CUSTOM_VMOPTIONS}" > "${MPS_CONFIG_FULL}/mps64.vmoptions"
 # write base path environment file
-echo "${MPS_CONFIG_BASE_PATH}" > ${MPS_CONFIG_FULL}/prefixEnvironment.env
+echo "${MPS_CONFIG_BASE_PATH}" > "${MPS_CONFIG_FULL}/prefixEnvironment.env"
 # write startup script
-echo "${MPS_LOCALIZED_STARTUP_SCRIPT}" > ${MPS_CONFIG_FULL}/startLocalizedMPS.sh
+echo "${MPS_LOCALIZED_STARTUP_SCRIPT}" > "${MPS_CONFIG_FULL}/startLocalizedMPS.sh"
 # make script executable
-chmod +x ${MPS_CONFIG_FULL}/startLocalizedMPS.sh
+chmod +x "${MPS_CONFIG_FULL}/startLocalizedMPS.sh"
 
 # install plugins
-if [[ -n "${arg_l:-}" ]] && declare -p arg_l 2> /dev/null | grep -q '^declare \-a'; then
+if [[ -n "${arg_l:-}" ]] && declare -p arg_l 2> /dev/null | grep -q '^declare -a'; then
     log_info "Adding plugins ..."
     # log_info "Adding $(ls -d ${input_file}/* | wc -l | cut -f 1) plugins to the mix ..."
     for input_file in "${arg_l[@]}"; do
+        [[ -n "${input_file}" ]] || continue
         log_info "  Copying from ${input_file}/* to ${MPS_CONFIG_FULL}/plugins/"
-        cp -r ${input_file}/* ${MPS_CONFIG_FULL}/plugins/
+        cp -r "${input_file}"/* "${MPS_CONFIG_FULL}/plugins/"
     done
 elif [[ -n "${arg_l:-}" ]]; then
     log_info "  Copying from ${arg_l}/* to ${MPS_CONFIG_FULL}/plugins/"
-    cp -r ${arg_l}/* ${MPS_CONFIG_FULL}/plugins/
+    cp -r "${arg_l}"/* "${MPS_CONFIG_FULL}/plugins/"
 fi
 
 
@@ -446,7 +484,7 @@ log_info "--------------------"
 # run the script if needed
 if [[ "${arg_r:-}" == 1 ]]; then
     log_info "Will now launch MPS with the new configuration"
-    eval "${MPS_CONFIG_FULL}/startLocalizedMPS.sh tmuxlog"
+    "${MPS_CONFIG_FULL}/startLocalizedMPS.sh" tmuxD
 fi
 
 

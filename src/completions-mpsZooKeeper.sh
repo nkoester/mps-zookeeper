@@ -1,4 +1,4 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
 
 MPS_BASE_PATH=${MPS_BASE_PATH:-/vol/mps/}
 AVAILABLE_MPS_VERSIONS=""
@@ -9,7 +9,7 @@ __get_MPS_versions()
     if [[ ! -d "${MPS_BASE_PATH}" ]]; then
         AVAILABLE_MPS_VERSIONS="-1"
     else
-        AVAILABLE_MPS_VERSIONS=$(find /${MPS_BASE_PATH}/MPS-* -maxdepth 1 -type d -prune -printf '%f ' 2>/dev/null  | sed 's/MPS-//g') || true
+        AVAILABLE_MPS_VERSIONS=$(find "${MPS_BASE_PATH%/}" -mindepth 1 -maxdepth 1 -type d -name 'MPS-*' -printf '%f ' 2>/dev/null | sed 's/MPS-//g') || true
     fi
 }
 
