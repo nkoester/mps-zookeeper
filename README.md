@@ -1,10 +1,8 @@
 # mpsZooKeeper.sh
 
-
 ## Short description
 
 Helper script for Jetbrains MPS to generate an isolated configuration prefix for isolated MPS instances
-
 
 ## Detailed description
 
@@ -20,14 +18,13 @@ make install
 
 (Note: Alternatively you can copy `mpsZooKeeper.sh` and `mpsZooKeeper-helper.sh` into your `$PATH`. Also copy `completions-mpsZooKeeper.sh` into your completion folder.)
 
-
 ### `$PATH` and bash completion
 
 In order to use the tool from your shell, add `$YOUR-PREFIX/bin` to your `$PATH` variable. Further, completions are provided and installed to `$YOUR-PREFIX/bashcompletions`.
 
 Assuming you installed to `${HOME}/local/`, add the following to your `.bashrc`:
 
-``` bash
+```bash
 # add local prefix to path
 export PATH=${HOME}/local/bin:${PATH}
 
@@ -45,31 +42,34 @@ fi
 ### Usage examples
 
 Create a temporary MPS configuration in /tmp and run it.
-``` bash
-$ mpsZooKeeper.sh --mps-version 2020.3.5-linux --run
+
+```bash
+mpsZooKeeper.sh --mps-version 2020.3.5-linux --run
 ```
 
 Create a temporary MPS configuration in /tmp, copy some existing plugins into it and run it.
-``` bash
-$ mpsZooKeeper.sh --mps-version 2020.3.5-linux --plugins /vol/mps/plugins/MPS-2020.3.4/myOwnPlugin/ --plugins /vol/mps/plugins/MPS-2020.3.4/iets3-2020.3.5116.6bd9f15/ --run
+
+```bash
+mpsZooKeeper.sh --mps-version 2020.3.5-linux --plugins /vol/mps/plugins/MPS-2020.3.4/myOwnPlugin/ --plugins /vol/mps/plugins/MPS-2020.3.4/iets3-2020.3.5116.6bd9f15/ --run
 ```
 
 Create a temporary MPS configuration in /tmp, with custom debugging settings.
-``` bash
-$ mpsZooKeeper.sh --mps-version 2020.3.5-linux --debug-enable --debug-enable-suspend --debug-port 20203
+
+```bash
+mpsZooKeeper.sh --mps-version 2020.3.5-linux --debug-enable --debug-enable-suspend --debug-port 20203
 ```
 
 Run a generated script and open the log in a new window
-``` bash
+
+```bash
 /tmp/.mpsconfig/MPS-2020-3-5-linux-220217-152625-UTC/startLocalizedMPS.sh tmuxLA
 ```
-
 
 ### MPS base path (`$MPS_BASE_PATH`)
 
 To have completions for your installed MPS versions put your MPS installations into the current default at `/vol/mps/MPS-{YOUR-VERSIONS-HERE}`. For example:
 
-``` bash
+```bash
 /vol/mps
 ├── MPS-2019.1.6-linux
 ├── MPS-2019.3.7-linux
@@ -82,12 +82,11 @@ To have completions for your installed MPS versions put your MPS installations i
 
 Alternatively, you can change the default path where your MPS versions lie by setting the environment variable `$MPS_BASE_PATH` before sourcing the completion file.
 
-
 ### Layout of generated configuration
 
 The mpsZooKeeper.sh writes a self-contained minimal configuration. This configuration is structured similarly to:
 
-``` bash
+```bash
     .mpsconfig/
   └──   MPS-2021.1.3-linux-210926-135815-UTC/
       ├──   config/
@@ -102,12 +101,11 @@ The mpsZooKeeper.sh writes a self-contained minimal configuration. This configur
       └──   startLocalizedMPS.sh
 ```
 
-
 ### Git clean deltes my configuration
 
 If you use `git clean -xdf` in your project root, your generated configuration in `.mpconfig/` will also be deleted (as it is not checked in). To avoid this you could create the following git alias ignoring configuration folders:
 
-``` git
+```git
 [alias]
     cleanxdf = clean -xdf -e .mpsconfig
 ```
@@ -116,9 +114,9 @@ If you use `git clean -xdf` in your project root, your generated configuration i
 
 If you do not want to start MPS without a localized configuration, you can delete all existing configurations and make the default config folder read-only:
 
-``` bash
-$ mv ~/${HOME}/.config/Jetbrains ~/${HOME}/.config/Jetbrains.bak
-$ chmod guo-w ~/${HOME}/.config/Jetbrains
+```bash
+mv ~/${HOME}/.config/Jetbrains ~/${HOME}/.config/Jetbrains.bak
+chmod guo-w ~/${HOME}/.config/Jetbrains
 ```
 
 Warning! This can break other things. IntelliJ Idea, for example, will not work anymore unless you create a localized configuration for it.

@@ -196,7 +196,7 @@ function testPaths {
 function tmuxd {
     echo "Spawning tmux session with name '${CONFIG_TMUX_SESSION_NAME}'"
     tmux new-session -d -s "${CONFIG_TMUX_SESSION_NAME}" \
-        "MPS_PROPERTIES='${CONFIG_BASE_PATH}/idea.properties' IDEA_VM_OPTIONS='${CONFIG_BASE_PATH}/mps64.vmoptions' '${CONFIG_MPS_PATH}/mps.sh'"
+        "MPS_PROPERTIES='${CONFIG_BASE_PATH}/idea.properties' IDEA_VM_OPTIONS='${CONFIG_BASE_PATH}/mps64.vmoptions' MPS_VM_OPTIONS='${CONFIG_BASE_PATH}/mps64.vmoptions' '${MPS_LAUNCHER}'"
 }
 
 function tmuxa {
@@ -231,6 +231,14 @@ function followLog {
 # run path test
 testPaths
 
+# MPS 2025.2+ ships a native launcher that layers MPS_VM_OPTIONS on top of the
+# bundled vmoptions; mps.sh (IDEA_VM_OPTIONS) replaces them instead
+if [[ -x "${CONFIG_MPS_PATH}/mps" ]]; then
+    MPS_LAUNCHER="${CONFIG_MPS_PATH}/mps"
+else
+    MPS_LAUNCHER="${CONFIG_MPS_PATH}/mps.sh"
+fi
+
 # start in the chosen mode
 if [[ "$1" == "tmuxD" ]]; then
     tmuxd
@@ -249,7 +257,7 @@ else
     echo " --> No/unknown argument ('${1}') given - startig MPS directly in this terminal"
     echo "     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA"
     echo " (!)"
-    MPS_PROPERTIES="${CONFIG_BASE_PATH}/idea.properties" IDEA_VM_OPTIONS="${CONFIG_BASE_PATH}/mps64.vmoptions" "${CONFIG_MPS_PATH}/mps.sh"
+    MPS_PROPERTIES="${CONFIG_BASE_PATH}/idea.properties" IDEA_VM_OPTIONS="${CONFIG_BASE_PATH}/mps64.vmoptions" MPS_VM_OPTIONS="${CONFIG_BASE_PATH}/mps64.vmoptions" "${MPS_LAUNCHER}"
 fi
 EOF
 
