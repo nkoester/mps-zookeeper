@@ -110,6 +110,7 @@ read -r -d '' MPS_CUSTOM_VMOPTIONS <<-'EOF' || true # exits non-zero when EOF en
 -Didea.log.config.file=log.xml
 -Didea.indices.psi.dependent.default=false
 -Didea.initially.ask.config=true
+-Dide.httpsupport.internalPort=63321
 DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=SUSPEND,address=DEBUGPORT
 EOF
 
@@ -193,6 +194,45 @@ function testPaths {
     fi
 }
 
+function isPortInUse {
+    local port="$1"
+    if command -v ss >/dev/null 2>&1; then
+        [[ -n "$(ss -Hltn "sport = :${port}" 2>/dev/null)" ]]
+    else
+        (exec 3<>"/dev/tcp/127.0.0.1/${port}") 2>/dev/null
+    fi
+}
+
+# Picks the first free port for MPS node URLs (http://127.0.0.1:PORT/node) so
+# that several MPS instances can run side by side without clashing on the
+# default and writes it into the vmoptions, which MPS reads on startup.
+function selectNodeUrlPort {
+    local vmoptions="${CONFIG_BASE_PATH}/mps64.vmoptions"
+    local key="-Dide.httpsupport.internalPort="
+    local port line found=0
+
+    for (( port = NODE_URL_PORT_FIRST; port <= NODE_URL_PORT_LAST; port++ )); do
+        isPortInUse "${port}" || { found=1; break; }
+    done
+    if [[ ${found} -eq 0 ]]; then
+        echo "No free node URL port in ${NODE_URL_PORT_FIRST}-${NODE_URL_PORT_LAST} - MPS will not open nodes from URLs."
+        return
+    fi
+
+    found=0
+    while IFS= read -r line; do
+        if [[ "${line}" == "${key}"* ]]; then
+            line="${key}${port}"
+            found=1
+        fi
+        printf '%s\n' "${line}"
+    done < "${vmoptions}" > "${vmoptions}.tmp"
+    [[ ${found} -eq 1 ]] || printf '%s\n' "${key}${port}" >> "${vmoptions}.tmp"
+    mv "${vmoptions}.tmp" "${vmoptions}"
+
+    echo "Node URL port: ${port} (http://127.0.0.1:${port}/node)"
+}
+
 function tmuxd {
     echo "Spawning tmux session with name '${CONFIG_TMUX_SESSION_NAME}'"
     tmux new-session -d -s "${CONFIG_TMUX_SESSION_NAME}" \
@@ -230,6 +270,11 @@ function followLog {
 
 # run path test
 testPaths
+
+# 63320 is kept free for the node URL switchboard; 63342+ is taken by the IntelliJ built-in server
+NODE_URL_PORT_FIRST=63321
+NODE_URL_PORT_LAST=63341
+selectNodeUrlPort
 
 # MPS 2025.2+ ships a native launcher that layers MPS_VM_OPTIONS on top of the
 # bundled vmoptions; mps.sh (IDEA_VM_OPTIONS) replaces them instead
