@@ -40,6 +40,7 @@ __mpsZooKeeper_completions()
     local used_plugins=0
     local used_darktheme=0
     local used_run=0
+    local used_update_prefix=0
 
     # generic settings
     local used_help=0
@@ -76,6 +77,7 @@ __mpsZooKeeper_completions()
             -l|--plugins) used_plugins=1;;
             # run
             -r|--run) used_run=1;;
+            -u|--update-prefix) used_update_prefix=1;;
             # generics
             -h|--help) used_help=1 ;;
             -d|--debug) used_debug=1 ;;
@@ -95,6 +97,9 @@ __mpsZooKeeper_completions()
         -b | --mps-base-path)
             args="-1"
             ;;
+        -u | --update-prefix)
+            args="-2"
+            ;;
         -l | --plugins)
             args="plugins"
             ;;
@@ -113,6 +118,7 @@ __mpsZooKeeper_completions()
             [ ${used_darktheme} -eq 0 ] && args="${args} --darktheme"
             [ ${used_plugins} -eq 0 ] && args="${args} --plugins"
             [ ${used_run} -eq 0 ] && args="${args} --run"
+            [ ${used_update_prefix} -eq 0 ] && args="${args} --update-prefix"
             # generics
             [ ${used_help} -eq 0 ] && args="${args} --help"
             [ ${used_debug} -eq 0 ] && args="${args} --debug"
@@ -133,6 +139,9 @@ __mpsZooKeeper_completions()
         COMPREPLY=($(compgen -S"/" -d "${cur}"))
         # old way with no tailing slashes
         # COMPREPLY=($(compgen -o default -- "${cur}"))
+    elif [[ "${args}" == "-2" ]]; then
+        # configuration folders or their start script
+        COMPREPLY=($(compgen -S"/" -d "${cur}") $(compgen -f -X '!*startLocalizedMPS.sh' -- "${cur}"))
     else
         COMPREPLY=($(compgen -W "${args}" -- "${cur}"))
     fi

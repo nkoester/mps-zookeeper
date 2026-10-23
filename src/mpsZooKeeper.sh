@@ -320,6 +320,7 @@ read -r -d '' __usage <<-'EOF' || true # exits non-zero when EOF encountered
 
     -l --plugins [arg]          Copies all sub folders and files from the given path into the plugin folder of the new prefix. Can be repeated.
     -r --run                    Runs the created configuration using tmux.
+    -u --update-prefix [arg]    Replaces the start script of an existing configuration folder (or the given start script) with the current one (keeps a backup) and exits.
     -t --darktheme              Use default dark theme (works for MPS versions > 2019.x).
 
     -h --help                   This page.
@@ -330,6 +331,7 @@ EOF
 
 read -r -d '' __usage_minimal <<-'EOF' || true # exits non-zero when EOF encountered
 Usage: mpsZooKeeper.sh -m mpsVersion [-b mpsInstallPath] [-f prefixPath] [-i identifier] [-x] [-s] [-p port]
+       mpsZooKeeper.sh -u configFolder|startScript
 EOF
 
 read -r -d '' __helptext <<-'EOF' || true # exits non-zero when EOF encountered
@@ -412,6 +414,26 @@ MPS_CONFIG_BASE_PATH=${MPS_CONFIG_BASE_PATH//MPS_BIN_PATH/${MPS_BIN_PATH}}
 
 # set date in start script
 MPS_LOCALIZED_STARTUP_SCRIPT=${MPS_LOCALIZED_STARTUP_SCRIPT//GENERATION_DATE/${CURRENT_DATE}}
+
+# update the start script of an existing prefix instead of creating a new one;
+# the script itself is prefix agnostic, all paths come from prefixEnvironment.env
+if [[ -n "${arg_u:-}" ]]; then
+    UPDATE_PREFIX=$(realpath -m "${arg_u}")
+    # accept the start script itself as well as its folder
+    [[ -f "${UPDATE_PREFIX}" ]] && UPDATE_PREFIX=$(dirname "${UPDATE_PREFIX}")
+    UPDATE_SCRIPT="${UPDATE_PREFIX}/startLocalizedMPS.sh"
+    if [[ ! -f "${UPDATE_SCRIPT}" ]] || [[ ! -f "${UPDATE_PREFIX}/prefixEnvironment.env" ]]; then
+        log_error "Not a configuration folder (no startLocalizedMPS.sh/prefixEnvironment.env): ${UPDATE_PREFIX}"
+        exit 1
+    fi
+    UPDATE_BACKUP="${UPDATE_SCRIPT}.bak-$(date -u +"%y%m%d-%H%M%S-UTC")"
+    cp -p -- "${UPDATE_SCRIPT}" "${UPDATE_BACKUP}"
+    echo "${MPS_LOCALIZED_STARTUP_SCRIPT}" > "${UPDATE_SCRIPT}"
+    chmod +x "${UPDATE_SCRIPT}"
+    log_info "Updated ${UPDATE_SCRIPT}"
+    log_notice "Backup: ${UPDATE_BACKUP}"
+    exit 0
+fi
 
 #   ____  ___
 #  / ___|/ _ \

@@ -141,6 +141,7 @@ Help using /home/nkoester/local/bin/mpsZooKeeper.sh
 
   -l --plugins [arg]          Copies iets3.opensource+mbeddr into the prefix plugin folder from /vol/mps/plugins/[arg]. Default="none"
   -r --run                    Runs the created configuration using tmux.
+  -u --update-prefix [arg]    Replaces the start script of an existing configuration folder (or the given start script) with the current one (keeps a backup) and exits.
 
   -h --help                   This page
   -d --debug                  Enables debug mode for this script.
