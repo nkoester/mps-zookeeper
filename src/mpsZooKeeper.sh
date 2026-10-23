@@ -556,6 +556,25 @@ log_notice "                      tmuxLD   -  Opens a new terminal with a 'tail 
 log_notice "                      tmuxLA   -  Opens a new terminal with a 'tail -F' on the idea.log and MPS itself will be started in a detached tmux session and attach this terminal to it."
 log_info "--------------------"
 
+# copy the start script path to the clipboard if a clipboard tool is around;
+# output is discarded as the tools fork and would otherwise hold pipes open
+function copyToClipboard {
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v wl-copy >/dev/null 2>&1; then
+        printf '%s' "$1" | wl-copy >/dev/null 2>&1
+    elif [[ -n "${DISPLAY:-}" ]] && command -v xclip >/dev/null 2>&1; then
+        printf '%s' "$1" | xclip -selection clipboard >/dev/null 2>&1
+    elif [[ -n "${DISPLAY:-}" ]] && command -v xsel >/dev/null 2>&1; then
+        printf '%s' "$1" | xsel --clipboard --input >/dev/null 2>&1
+    elif command -v pbcopy >/dev/null 2>&1; then
+        printf '%s' "$1" | pbcopy >/dev/null 2>&1
+    else
+        return 1
+    fi
+}
+if copyToClipboard "${MPS_CONFIG_FULL}/startLocalizedMPS.sh"; then
+    log_info "Startup script path copied to clipboard"
+fi
+
 # run the script if needed
 if [[ "${arg_r:-}" == 1 ]]; then
     log_info "Will now launch MPS with the new configuration"
